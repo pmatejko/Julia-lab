@@ -1,23 +1,26 @@
 abstract Zwierzę
-type MartweZwierzę <: Zwierzę end
+
+type BrakZwierzęcia <: Zwierzę end
 
 type Drapieżnik <: Zwierzę
   nazwa::String
 end
+
 type Ofiara <: Zwierzę
   nazwa::String
 end
 
 type MiejsceJestJużZajęte <: Exception end
 type NieZnalezionoZwierzęcia <: Exception end
+type BrakMiejscDoUcieczki <: Exception end
 
 #----------------------------------------------------
 
 function wyświetl()
-  for i in 1:N
-    for j in 1:N
-      if isdefined(świat, (j-1)*N + i) && !(typeof(świat[i,j]) <: MartweZwierzę)
-        print(string(świat[i,j].nazwa, " "))
+  for i = 1:N
+    for j = 1:N
+      if !(typeof(świat[j,i]) <: BrakZwierzęcia)
+        print(string(świat[j,i].nazwa, " "))
       else
         print("----- ")
       end
@@ -30,8 +33,8 @@ end
 function znajdźZwierzę(zwierzę::Zwierzę)
   for i in 1:N
     for j in 1:N
-      if isdefined(świat, (j-1)*N + i) && świat[i,j] == zwierzę
-        return i,j
+      if świat[j,i] == zwierzę
+        return j,i
       end
     end
   end
@@ -42,12 +45,12 @@ end
 
 
 
-function dodajZwierzę(zwierzę::Zwierzę, x::Int, y::Int)
-  if !isdefined(świat, (y-1)*N + x) || typeof(świat[x,y]) <: MartweZwierzę
+function dodajZwierzę(zwierzę::Zwierzę, x::Int64, y::Int64)
+  if typeof(świat[x,y]) <: BrakZwierzęcia
     świat[x,y] = zwierzę
     wyświetl()
   else
-    throw(MiejsceJetJużZajęte())
+    throw(MiejsceJestJużZajęte())
   end
 end
 
@@ -59,22 +62,21 @@ end
 
 function interakcja(zw1::Drapieżnik, zw2::Ofiara)
   (x, y) = znajdźZwierzę(zw2)
-  świat[x,y] = MartweZwierzę()
+  świat[x,y] = BrakZwierzęcia()
   wyświetl()
 end
 
 function interakcja(zw1::Ofiara, zw2::Drapieżnik)
-  for i in 1:N
-    for j in 1:N
-      if !isdefined(świat, (j-1)*N + i) || typeof(świat[i,j]) <: MartweZwierzę
-        (x, y) = znajdźZwierzę(zw1)
-        świat[i,j] = zw1
-        świat[x,y] = MartweZwierzę()
-        wyświetl()
-        return
-      end
+  for i = 1:N, j = 1:N
+    if typeof(świat[j,i]) <: BrakZwierzęcia
+      (x, y) = znajdźZwierzę(zw1)
+      świat[j,i] = zw1
+      świat[x,y] = BrakZwierzęcia()
+      wyświetl()
+      return
     end
   end
+  throw(BrakMiejscDoUcieczki())
 end
 
 function interakcja(zw1::Drapieżnik, zw2::Drapieżnik)
@@ -90,9 +92,10 @@ end
 #--------------------------------------------------
 
 println("Podaj długość boku planszy: ")
-N = parse(Int, input())
+const N = parse(Int64, readline())
 
-świat = Array{Zwierzę, 2}(N,N)
+global świat = Array{Zwierzę, 2}(N,N)
+fill!(świat, BrakZwierzęcia())
 
 małpa = Ofiara("małpa")
 okoń = Ofiara("okoń")
