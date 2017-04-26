@@ -1,4 +1,5 @@
 # Zmiany:
+#
 # N i K - const
 # zmienna globalna graph -> jako argument funkcji (ze zdef. typem)
 # Do typów zdefiniowane typy ich pól
@@ -11,28 +12,31 @@
 # Zmiana adresu na Int8, jako że korzystał jedynie z wartości 1-100
 # Dodanie @simd przy większoćci forów oraz @inbounds przy odwoływaniu się do elementów tablicy
 # W convert_to_graph uzycie list comprehension do stworzenia pierwszej tablicy (zamiast stworzenia pustej i pushowania)
+# W petli for przegladanie najpierw wg kolumn a potem wierszy
 #
 #
-# Przed zmianami - @time test_graph()
+# Before - @time Graphs.test_graph()
 # 16.146923 seconds (118.46 M allocations: 12.826 GB, 14.28% gc time)
 #
 #
-# Po zmianach - @time test_graph()
-# 0.485664 seconds (1.71 M allocations: 129.134 MB, 2.48% gc time)
+# After - @time Graphs.test_graph()
+# 0.475838 seconds (1.71 M allocations: 129.165 MB, 2.89% gc time)
 #
+# @benchmark Graphs.test_graph()
 # BenchmarkTools.Trial:
-#  memory estimate:  129.14 MiB
-#  allocs estimate:  1712099
+#  memory estimate:  128.95 MiB
+#  allocs estimate:  1702797
 #  --------------
-#  minimum time:     490.168 ms (2.69% GC)
-#  median time:      497.562 ms (2.60% GC)
-#  mean time:        497.672 ms (2.66% GC)
-#  maximum time:     504.395 ms (2.57% GC)
+#  minimum time:     480.882 ms (2.75% GC)
+#  median time:      485.481 ms (2.72% GC)
+#  mean time:        485.665 ms (2.62% GC)
+#  maximum time:     493.162 ms (2.09% GC)
 #  --------------
 #  samples:          11
 #  evals/sample:     1
 #  time tolerance:   5.00%
 #  memory tolerance: 1.00%
+
 #
 
 
@@ -44,7 +48,7 @@ export GraphVertex, NodeType, Person, Address,
        sampleTrue, generate_random_graph, get_random_person, get_random_address, generate_random_nodes,
        convert_to_graph, create_vertex,
        bfs, check_euler, partition,
-       value_to_buf, graph_to_str, node_to_str,
+       value_to_buf, graph_to_str,
        test_graph
 
 
@@ -107,7 +111,7 @@ function generate_random_nodes()
   nodes = Vector{NodeType}()
 
   @simd for i = 1:N
-    push!(nodes, rand() > 0.5 ? get_random_person() : get_random_address())
+    push!(nodes, rand() > 0.5 ? get_random_person()::NodeType : get_random_address()::NodeType)
   end
 
   nodes
@@ -128,7 +132,7 @@ function convert_to_graph(A::BitArray{2}, nodes::Vector{NodeType})
 
   @simd for i = 1:N
     @simd for j = 1:N
-      @inbounds if A[i,j]
+      @inbounds if A[j,i]
         @inbounds push!(graph[i].neighbors, graph[j])
       end
     end
