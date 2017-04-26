@@ -6,18 +6,34 @@
 # Zmiana typu tablicy A z Int64 na BitArray (wypełnienie falses(N,N))
 # W partition przypisanie "parts" typu
 # W graph_to_str zamiana ifów na funkcje przyjmujące różne typy
-# Zamiana interpolacji stringa na tworzenie z kilku stringów i zmiennych
+# Najpierw tworzenie IOBuffer, a dopiero potem zamiana na stringa (bo string jest niemutowalny)
 # W generate_random_graph dodanie funkcji ktora uzywa length(A) zamiast N*N
 # Zmiana adresu na Int8, jako że korzystał jedynie z wartości 1-100
 # Dodanie @simd przy większoćci forów oraz @inbounds przy odwoływaniu się do elementów tablicy
-# Tworzenie stringa z grafu zmienia string tylko raz dla kazdego wierzcholka
+# W convert_to_graph uzycie list comprehension do stworzenia pierwszej tablicy (zamiast stworzenia pustej i pushowania)
 #
-#
-# Po zmianach - @time test_graph()
-# 4.194527 seconds (2.97 M allocations: 3.563 GB, 19.40% gc time)
 #
 # Przed zmianami - @time test_graph()
 # 16.146923 seconds (118.46 M allocations: 12.826 GB, 14.28% gc time)
+#
+#
+# Po zmianach - @time test_graph()
+# 0.485664 seconds (1.71 M allocations: 129.134 MB, 2.48% gc time)
+#
+# BenchmarkTools.Trial:
+#  memory estimate:  129.14 MiB
+#  allocs estimate:  1712099
+#  --------------
+#  minimum time:     490.168 ms (2.69% GC)
+#  median time:      497.562 ms (2.60% GC)
+#  mean time:        497.672 ms (2.66% GC)
+#  maximum time:     504.395 ms (2.57% GC)
+#  --------------
+#  samples:          11
+#  evals/sample:     1
+#  time tolerance:   5.00%
+#  memory tolerance: 1.00%
+#
 
 
 module Graphs
@@ -26,9 +42,9 @@ using StatsBase
 
 export GraphVertex, NodeType, Person, Address,
        sampleTrue, generate_random_graph, get_random_person, get_random_address, generate_random_nodes,
-       convert_to_graph,
+       convert_to_graph, create_vertex,
        bfs, check_euler, partition,
-       value_to_str, graph_to_str, node_to_str,
+       value_to_buf, graph_to_str, node_to_str,
        test_graph
 
 
@@ -89,6 +105,7 @@ end
 # Generates N random nodes (of random NodeType).
 function generate_random_nodes()
   nodes = Vector{NodeType}()
+
   @simd for i = 1:N
     push!(nodes, rand() > 0.5 ? get_random_person() : get_random_address())
   end
@@ -96,11 +113,18 @@ function generate_random_nodes()
   nodes
 end
 
+function create_vertex(person::Person)
+  GraphVertex{Person}(person, Vector{GraphVertex}())
+end
+
+function create_vertex(address::Address)
+  GraphVertex{Address}(address, Vector{GraphVertex}())
+end
+
 #= Converts given adjacency matrix (NxN)
   into list of graph vertices (of type GraphVertex and length N). =#
-function convert_to_graph(A::BitArray{2}, nodes::Vector{NodeType}, graph::Array{GraphVertex,1})
-  N = length(nodes)
-  push!(graph, map(n -> GraphVertex(n, GraphVertex[]), nodes)...)
+function convert_to_graph(A::BitArray{2}, nodes::Vector{NodeType})
+  graph::Array{GraphVertex,1} = [create_vertex(n) for n = nodes]
 
   @simd for i = 1:N
     @simd for j = 1:N
@@ -109,6 +133,8 @@ function convert_to_graph(A::BitArray{2}, nodes::Vector{NodeType}, graph::Array{
       end
     end
   end
+
+  graph
 end
 
 #= Groups graph nodes into connected parts. E.g. if entire graph is connected,
@@ -164,35 +190,38 @@ end
 #= Returns text representation of the graph consisiting of each node's value
    text and number of its neighbors. =#
 
-function value_to_str(n::Person)
-  string("Person: ", n.name, "\n")
+function value_to_buf(graph_buf::IOBuffer, n::Person)
+  print(graph_buf, "Person: ")
+  print(graph_buf, n.name)
 end
 
-function value_to_str(n::Address)
-  string("Street nr: ", n.streetNumber, "\n")
+function value_to_buf(graph_buf::IOBuffer, n::Address)
+  print(graph_buf, "Street nr: ")
+  print(graph_buf, n.streetNumber)
 end
 
 function graph_to_str(graph::Array{GraphVertex,1})
-  graph_str = ""
+  graph_buf = IOBuffer()
   for v in graph
-    graph_str *= string("****\n", value_to_str(v.value), "Neighbors: ", length(v.neighbors), "\n")
+    print(graph_buf, "****\n")
+    value_to_buf(graph_buf, v.value)
+    print(graph_buf, "\nNeighbors: ")
+    print(graph_buf, length(v.neighbors))
+    print(graph_buf, "\n")
   end
-  graph_str
+  takebuf_string(graph_buf)
 end
 
 #= Tests graph functions by creating 100 graphs, checking Euler cycle
   and creating text representation. =#
 function test_graph()
   @simd for i=1:100
-    graph = Array{GraphVertex,1}()
-
     A = generate_random_graph()
     nodes = generate_random_nodes()
-    convert_to_graph(A, nodes, graph)
+    graph = convert_to_graph(A, nodes)
 
     str = graph_to_str(graph)
     #println(str)
-    #check_euler(graph)
     println(check_euler(graph))
   end
 end
