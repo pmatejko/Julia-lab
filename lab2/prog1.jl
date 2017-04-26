@@ -1,16 +1,18 @@
 
+# Proporcje czasu spędzonego w każdej z fun
+# przestają odpowiadać rzeczywistości
+# dla delay = 0.29 (około)
+# (wcześniej zaczynają być mniej dokładne)
 
 function fun1()
-  strings = String[]
   for i in 1:100000
-    push!(strings, string(i))
+    string(i)
   end
 end
 
 function fun2()
-  strings = String[]
   for i in 1:10000
-    push!(strings, string(i))
+    string(i)
   end
 end
 

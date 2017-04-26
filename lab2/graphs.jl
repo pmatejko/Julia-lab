@@ -10,15 +10,14 @@
 # W generate_random_graph dodanie funkcji ktora uzywa length(A) zamiast N*N
 # Zmiana adresu na Int8, jako że korzystał jedynie z wartości 1-100
 # Dodanie @simd przy większoćci forów oraz @inbounds przy odwoływaniu się do elementów tablicy
+# Tworzenie stringa z grafu zmienia string tylko raz dla kazdego wierzcholka
 #
 #
 # Po zmianach - @time test_graph()
-# 7,369604 s  (3.59 M allocations: 9,727 GB, 29,94% gc time)
-# @allocated - 10 441 325 120
+# 4.194527 seconds (2.97 M allocations: 3.563 GB, 19.40% gc time)
 #
 # Przed zmianami - @time test_graph()
 # 16.146923 seconds (118.46 M allocations: 12.826 GB, 14.28% gc time)
-# @allocated - 13 774 531 584
 
 
 module Graphs
@@ -55,10 +54,10 @@ end
 
 
 # Number of graph nodes.
-const N = 800
+const N = Int64(800)
 
 # Number of graph edges.
-const K = 10000
+const K = Int64(10000)
 
 
 #= Generates random directed graph of size N with K edges
@@ -71,7 +70,7 @@ function sampleTrue(A::BitArray{2})
 end
 
 function generate_random_graph()
-    A = falses(N, N)
+    A::BitArray{2} = falses(N, N)
     sampleTrue(A)
 
     A
@@ -93,6 +92,7 @@ function generate_random_nodes()
   @simd for i = 1:N
     push!(nodes, rand() > 0.5 ? get_random_person() : get_random_address())
   end
+
   nodes
 end
 
@@ -102,10 +102,12 @@ function convert_to_graph(A::BitArray{2}, nodes::Vector{NodeType}, graph::Array{
   N = length(nodes)
   push!(graph, map(n -> GraphVertex(n, GraphVertex[]), nodes)...)
 
-  for i = 1:N, j = 1:N
+  @simd for i = 1:N
+    @simd for j = 1:N
       @inbounds if A[i,j]
         @inbounds push!(graph[i].neighbors, graph[j])
       end
+    end
   end
 end
 
@@ -156,7 +158,7 @@ function check_euler(graph::Array{GraphVertex,1})
   if length(partition(graph)) == 1
     return all(map(v -> iseven(length(v.neighbors)), graph))
   end
-    "Graph is not connected"
+  "Graph is not connected"
 end
 
 #= Returns text representation of the graph consisiting of each node's value
@@ -173,9 +175,7 @@ end
 function graph_to_str(graph::Array{GraphVertex,1})
   graph_str = ""
   for v in graph
-    graph_str *= "****\n"
-    graph_str *= value_to_str(v.value)
-    graph_str *= string("Neighbors: ", length(v.neighbors), "\n")
+    graph_str *= string("****\n", value_to_str(v.value), "Neighbors: ", length(v.neighbors), "\n")
   end
   graph_str
 end
@@ -184,7 +184,7 @@ end
   and creating text representation. =#
 function test_graph()
   @simd for i=1:100
-    graph = GraphVertex[]
+    graph = Array{GraphVertex,1}()
 
     A = generate_random_graph()
     nodes = generate_random_nodes()
@@ -192,6 +192,7 @@ function test_graph()
 
     str = graph_to_str(graph)
     #println(str)
+    #check_euler(graph)
     println(check_euler(graph))
   end
 end
