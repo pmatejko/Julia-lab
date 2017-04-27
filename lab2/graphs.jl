@@ -20,23 +20,22 @@
 #
 #
 # After - @time Graphs.test_graph()
-# 0.475838 seconds (1.71 M allocations: 129.165 MB, 2.89% gc time)
+# 0.467413 seconds (1.71 M allocations: 129.591 MB, 3.13% gc time)
 #
 # @benchmark Graphs.test_graph()
 # BenchmarkTools.Trial:
-#  memory estimate:  128.95 MiB
-#  allocs estimate:  1702797
+#  memory estimate:  129.24 MiB
+#  allocs estimate:  1708163
 #  --------------
-#  minimum time:     480.882 ms (2.75% GC)
-#  median time:      485.481 ms (2.72% GC)
-#  mean time:        485.665 ms (2.62% GC)
-#  maximum time:     493.162 ms (2.09% GC)
+#  minimum time:     468.752 ms (3.04% GC)
+#  median time:      470.817 ms (3.06% GC)
+#  mean time:        470.614 ms (3.12% GC)
+#  maximum time:     472.464 ms (2.96% GC)
 #  --------------
 #  samples:          11
 #  evals/sample:     1
 #  time tolerance:   5.00%
 #  memory tolerance: 1.00%
-
 #
 
 
@@ -195,23 +194,18 @@ end
    text and number of its neighbors. =#
 
 function value_to_buf(graph_buf::IOBuffer, n::Person)
-  print(graph_buf, "Person: ")
-  print(graph_buf, n.name)
+  print(graph_buf, "****\nPerson: ", n.name)
 end
 
 function value_to_buf(graph_buf::IOBuffer, n::Address)
-  print(graph_buf, "Street nr: ")
-  print(graph_buf, n.streetNumber)
+  print(graph_buf, "****\nStreet nr: ", n.streetNumber)
 end
 
 function graph_to_str(graph::Array{GraphVertex,1})
   graph_buf = IOBuffer()
   for v in graph
-    print(graph_buf, "****\n")
     value_to_buf(graph_buf, v.value)
-    print(graph_buf, "\nNeighbors: ")
-    print(graph_buf, length(v.neighbors))
-    print(graph_buf, "\n")
+    print(graph_buf, "\nNeighbors: ", length(v.neighbors), "\n")
   end
   takebuf_string(graph_buf)
 end
