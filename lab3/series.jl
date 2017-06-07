@@ -10,8 +10,8 @@ macro fill_series(ex)
     sym = ex.args[1].args[2].args[2]
   end
 
-  indexes = Array{Int,1}()
-  findIndexes(ex.args, indexes)
+  indexes = Vector{Int}()
+  findIndexes!(ex.args, indexes)
 
   max, min = maxAndMin(indexes)
   diff = max - min
@@ -30,25 +30,31 @@ end
 
 
 
-function findIndexes(ex::Array{Any,1}, ind::Array{Int,1})
+function findIndexes!(ex::Array{Any,1}, ind::Array{Int,1})
   for i = 1:length(ex)
-    findIndexes(ex[i], ind)
+    findIndexes!(ex[i], ind)
   end
 end
 
-function findIndexes(ex::Expr, ind::Array{Int,1})
+function findIndexes!(ex::Expr, ind::Array{Int,1})
   if ex.head == :call
-    findIndexes(ex.args[2:end], ind)
+    findIndexes!(ex.args[2:end], ind)
   elseif ex.head == :ref
-    findOneIndex(ex.args[2], ind)
+    findOneIndex!(ex.args[2], ind)
   end
 end
 
-function findOneIndex(ex::Symbol, ind::Array{Int,1})
+function findIndexes!(ex::Number, ind::Array{Int,1}) end
+
+function findIndexes!(ex::Symbol, ind::Array{Int,1}) end
+
+
+
+function findOneIndex!(ex::Symbol, ind::Array{Int,1})
   push!(ind, 0)
 end
 
-function findOneIndex(ex::Expr, ind::Array{Int,1})
+function findOneIndex!(ex::Expr, ind::Array{Int,1})
   index = eval(Expr(:call, ex.args[1], ex.args[3]))
   push!(ind, index)
 end
