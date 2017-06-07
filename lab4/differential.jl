@@ -38,7 +38,7 @@ end
 
 
 function experiments(file = "results.csv", expNum = 4)
-  r() = 10 * rand()
+  r() = 4 * rand() + 2
 
   expIDs = Vector{Symbol}()
 
